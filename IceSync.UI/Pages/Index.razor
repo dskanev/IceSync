@@ -1,0 +1,35 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<div class="text-container">
+    <h1>IceSync - Technical Description</h1>
+    <p>Welcome to IceSync.</p>
+
+    <p>The application is made using clean architecture and consists of 3 main components: UI, Web API, and a Hosted service.</p>
+
+    <h3>UI</h3>
+    <p>The UI is a Blazor app made using .NET 6. It displays workflows in a table, one per row. Next to each workflow, there is a button. Once clicked, it changes the state of the IsRunning column to true and once the run completes, it shows a pop-up message with the result.</p>
+    <p>The UI uses the Refit library to handle HTTP requests to the Web API.</p>
+
+    <h3>Web API</h3>
+    <p>The Web API is made using .NET 6 and the CQRS pattern. Its role is to serve as a gateway API for the UI and take the responsibility of calling the database and the Universal Loader API.</p>
+
+    <h4>HTTP</h4>
+    <p>HTTP requests to the Universal Loader API are again handled by Refit. Because by default Refit handles unsuccessful responses as exceptions, I've added a custom exception handling middleware which maps the refit exception to the appropriate status code.</p>
+
+    <h4>Authentication</h4>
+    <p>I've created an HTTP client handler to the refit client which has its place in the request pipeline before the actual request to the Universal Loader API. This handler checks if an authorization token is found in the in-memory cache and if it's expired. If need be, it calls the auth endpoint and gets a new token, then stores it in cache. It then adds it as a header to the following request.</p>
+
+    <h4>Database</h4>
+    <p>The database is made using EF Core with SQL Server and code-first. The primary key (Id) of the Workflow entity has autogeneration disabled to allow having the same Ids as the entities coming from the Universal Loader API.</p>
+
+    <h3>Hosted Service</h3>
+    <p>In the background, there is a hosted service for synching data between the database and the Universal Loader API. It runs on program start and then every 30 minutes.</p>
+
+    <h3>Tests</h3>
+    <p>Unit tests were created using nUnit and Moq, also EfCore.InMemory for the DbContext-related tests. The UI was tested using bUnit which is a library for testing blazor components.</p>
+
+    <h3>Containerization</h3>
+    <p>The solution is containerized and orchestrated using docker-compose, with seperate containers for the UI, Web API and SQL Server. SQL server data is mounted to a named volume (sqldata), so data is persisted outside of the container's filesystem.</p>
+</div>

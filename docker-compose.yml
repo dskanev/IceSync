@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+    data:
+        container_name: sqlserver
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        ports:
+            - "1433:1433"
+        environment:
+            - ACCEPT_EULA=Y
+            - SA_PASSWORD=yourStrongPassword12!@
+        volumes:
+            - sqldata:/var/opt/mssql
+        networks:
+            - ice-network
+    api:
+        container_name: api
+        build:
+            context: ./
+            dockerfile: ./IceSync.API/Dockerfile
+        ports:
+            - "5001:80"
+        environment:
+            - UniLoaderApiConfiguration__Url=https://api-test.universal-loader.com
+            - UniLoaderApiConfiguration__CompanyId=ice-cream-ood
+            - UniLoaderApiConfiguration__UserId=ice-api-user
+            - UniLoaderApiConfiguration__UserSecret=n3yR7Bsk7El4
+            - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=IceSyncLocal;User Id=sa; Password=yourStrongPassword12!@;MultipleActiveResultSets=true;TrustServerCertificate=True
+        restart: on-failure
+        volumes:
+            - ./.aspnet/api/DataProtection-Keys:/root/.aspnet/DataProtection-Keys
+        networks:
+            - ice-network
+        depends_on:
+            - data
+    ui:
+        container_name: ui
+        build:
+            context: ./
+            dockerfile: ./IceSync.UI/Dockerfile
+        ports:
+            - "6001:80"
+        environment:
+            - IceSyncAPI__Url=http://api
+        restart: on-failure
+        volumes:
+            - ./.aspnet/ui/DataProtection-Keys:/root/.aspnet/DataProtection-Keys
+        networks:
+            - ice-network
+        depends_on:
+            - data
+            - api
+networks:
+    ice-network:
+volumes:
+    sqldata:
+            

@@ -1,0 +1,88 @@
+﻿@page "/workflowsDashboard"
+@using IceSync.UI.Models;
+@using IceSync.UI.Services;
+@inject IWorkflowService WorkflowService
+
+<h3>Workflows</h3>
+
+@if (Workflows == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Active</th>
+                <th>Running</th>
+                <th>Multi Exec Behavior</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var workflow in Workflows)
+            {
+                <tr>
+                    <td>@workflow.Id</td>
+                    <td>@workflow.Name</td>
+                    <td>@workflow.IsActive</td>
+                    <td class="@(RunningWorkflows.Contains(workflow.Id) || workflow.IsRunning ? "green" : "red")"
+                        >@(RunningWorkflows.Contains(workflow.Id) ? "True" : workflow.IsRunning.ToString())</td>
+                    <td>@workflow.MultiExecBehavior</td>
+                    <td>
+                        <div class="action-container">
+                            @if (notificationMessages.ContainsKey(workflow.Id))
+                            {
+                                <span class="comic-bubble @notificationMessages[workflow.Id].Item1">
+                                    @notificationMessages[workflow.Id].Item2
+                                </span>
+                            }
+                            <button class="run-btn" @onclick="(() => RunWorkflow(workflow.Id))">Run</button>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private IList<WorkflowOutputModel> Workflows;
+    private Dictionary<int, Tuple<string, string>> notificationMessages = new Dictionary<int, Tuple<string, string>>();
+    private HashSet<int> RunningWorkflows = new HashSet<int>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Workflows = await WorkflowService.GetAllWorkflowsAsync();
+    }
+
+    private async Task RunWorkflow(int workflowId)
+    {
+        RunningWorkflows.Add(workflowId);
+        StateHasChanged();
+
+        var isSuccess = await WorkflowService.RunWorkflowAsync(workflowId);
+
+        RunningWorkflows.Remove(workflowId);
+        StateHasChanged();
+
+        var status = isSuccess ? "success" : "failure";
+        var message = isSuccess ? "Successfully run!" : "Failed to run.";
+
+        notificationMessages[workflowId] = new Tuple<string, string>(status, message);
+        _ = RemoveMessageAfterDelay(workflowId);
+    }
+
+    private async Task RemoveMessageAfterDelay(int workflowId)
+    {
+        await Task.Delay(3000);
+        if (notificationMessages.ContainsKey(workflowId))
+        {
+            notificationMessages.Remove(workflowId);
+            StateHasChanged();
+        }
+    }
+}
